@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Manage your Lumen AI account profile and sign out securely." />
+    <title>Profile | Lumen AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="profile">
+    <div data-site-header></div>
+
+    <main class="page-shell">
+      <section class="section">
+        <div class="container reveal">
+          <div class="section-header">
+            <span class="eyebrow">Your account</span>
+            <h1>Welcome to your personalized workspace.</h1>
+            <p class="lead">Review your details, manage your experience, and sign out whenever you're done.</p>
+          </div>
+
+          <div class="card-grid">
+            <article class="card">
+              <div class="card-icon">◎</div>
+              <h3 id="profile-name">Loading…</h3>
+              <p id="profile-email">Loading…</p>
+              <p style="margin-top: 0.8rem;">Your account is active and ready for premium product experiences.</p>
+            </article>
+            <article class="card">
+              <div class="card-icon">⚙</div>
+              <h3>Account controls</h3>
+              <p>Update your workspace preferences, manage billing, and keep your activity synced across devices.</p>
+              <button class="btn btn-primary" id="logout-button" style="margin-top: 1rem;">Log out</button>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div data-site-footer></div>
+    <script src="components.js"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const user = window.readCurrentUser();
+        const nameNode = document.getElementById('profile-name');
+        const emailNode = document.getElementById('profile-email');
+        const logoutButton = document.getElementById('logout-button');
+
+        if (!user) {
+          window.location.href = 'login.html';
+          return;
+        }
+
+        nameNode.textContent = user.name;
+        emailNode.textContent = user.email;
+
+        logoutButton?.addEventListener('click', () => {
+          window.logoutUser();
+          window.location.href = 'index.html';
+        });
+      });
+    </script>
+  </body>
+</html>

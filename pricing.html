@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Choose a pricing plan for Lumen AI’s immersive 3D commerce platform." />
+    <title>Pricing | Lumen AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="pricing">
+    <div data-site-header></div>
+
+    <main class="page-shell">
+      <section class="section">
+        <div class="container reveal">
+          <div class="section-header" style="align-items: center; text-align: center;">
+            <span class="eyebrow">Flexible pricing</span>
+            <h1>Scale from early experiments to full catalog deployment.</h1>
+            <p class="lead">Use credits for on-demand generation with predictable plans for teams that need speed and consistency.</p>
+          </div>
+          <div class="toggle-wrap" style="margin: 0 auto 1.5rem;">
+            <span>Monthly</span>
+            <label class="switch">
+              <input type="checkbox" data-pricing-toggle />
+              <span class="slider"></span>
+            </label>
+            <span>Yearly</span>
+          </div>
+          <div class="pricing-grid">
+            <article class="pricing-card reveal">
+              <div class="pricing-badge">Starter</div>
+              <h3>For early launches</h3>
+              <p style="margin-top: 0.7rem;">Ideal for single-brand experiments and small catalogs.</p>
+              <div class="price" data-price data-monthly="$29" data-annual="$24">$29</div>
+              <p>/month</p>
+              <ul class="plan-list">
+                <li>250 AI credits</li>
+                <li>3 active experiences</li>
+                <li>Basic AR export</li>
+                <li>Shopify embed support</li>
+              </ul>
+              <a class="btn btn-secondary" href="signup.html" style="margin-top: 1rem;">Choose Starter</a>
+            </article>
+            <article class="pricing-card featured reveal">
+              <div class="pricing-badge">Most popular</div>
+              <h3>Pro</h3>
+              <p style="margin-top: 0.7rem;">For commerce teams shipping immersive product stories at scale.</p>
+              <div class="price" data-price data-monthly="$99" data-annual="$79">$99</div>
+              <p>/month</p>
+              <ul class="plan-list">
+                <li>1,500 AI credits</li>
+                <li>Unlimited experiences</li>
+                <li>Advanced analytics</li>
+                <li>Priority rendering queue</li>
+              </ul>
+              <a class="btn btn-primary" href="signup.html" style="margin-top: 1rem;">Choose Pro</a>
+            </article>
+            <article class="pricing-card reveal">
+              <div class="pricing-badge">Enterprise</div>
+              <h3>For global retail brands</h3>
+              <p style="margin-top: 0.7rem;">Custom workflows, security controls, and dedicated onboarding.</p>
+              <div class="price" data-price data-monthly="Custom" data-annual="Custom">Custom</div>
+              <p>/month</p>
+              <ul class="plan-list">
+                <li>Dedicated success team</li>
+                <li>API and enterprise integrations</li>
+                <li>Custom SLAs</li>
+                <li>Private training sessions</li>
+              </ul>
+              <a class="btn btn-secondary" href="contact.html" style="margin-top: 1rem;">Talk to Sales</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container reveal">
+          <div class="section-header">
+            <span class="eyebrow">Compare plans</span>
+            <h2>See exactly what each plan includes.</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Starter</th>
+                  <th>Pro</th>
+                  <th>Enterprise</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>AI credits</td><td>250</td><td>1,500</td><td>Custom</td></tr>
+                <tr><td>3D experiences</td><td>3</td><td>Unlimited</td><td>Unlimited</td></tr>
+                <tr><td>AR exports</td><td>Basic</td><td>Advanced</td><td>Advanced + custom</td></tr>
+                <tr><td>Analytics</td><td>Basic</td><td>Full</td><td>Full + custom</td></tr>
+                <tr><td>Support</td><td>Email</td><td>Priority</td><td>Dedicated</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div data-site-footer></div>
+    <script src="components.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

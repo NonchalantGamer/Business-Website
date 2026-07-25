@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Create your Lumen AI account to launch immersive 3D commerce experiences." />
+    <title>Sign Up | Lumen AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="signup">
+    <div data-site-header></div>
+
+    <main class="auth-page">
+      <div class="container">
+        <div class="auth-card reveal">
+          <div class="section-header">
+            <span class="eyebrow">Start free</span>
+            <h2>Create your Lumen AI account.</h2>
+          </div>
+          <form id="signup-form" novalidate>
+            <label>
+              Full name
+              <input id="signup-name" type="text" placeholder="Alex Rivera" required />
+            </label>
+            <label>
+              Email
+              <input id="signup-email" type="email" placeholder="you@company.com" required />
+            </label>
+            <label>
+              Password
+              <input id="signup-password" type="password" placeholder="Create a strong password" required />
+            </label>
+            <p id="signup-message" role="status" aria-live="polite" style="margin-bottom: 0.8rem; color: var(--muted);"></p>
+            <button class="btn btn-primary" type="submit" style="width: 100%;">Create account</button>
+          </form>
+          <div class="auth-links">
+            <a href="login.html">Have an account?</a>
+            <a href="contact.html">Need help?</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="components.js"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('signup-form');
+        const message = document.getElementById('signup-message');
+
+        form?.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const name = document.getElementById('signup-name').value;
+          const email = document.getElementById('signup-email').value;
+          const password = document.getElementById('signup-password').value;
+          const user = window.signupUser({ name, email, password });
+
+          if (user) {
+            message.textContent = `Account created for ${user.name}.`;
+            message.style.color = '#8cf7c2';
+            window.location.href = 'index.html';
+          } else {
+            message.textContent = 'An account with that email already exists.';
+            message.style.color = '#ff9c9c';
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
