@@ -33,6 +33,10 @@
               Password
               <input id="signup-password" type="password" placeholder="Create a strong password" required />
             </label>
+            <label>
+              Confirm Password
+              <input id="signup-password-confirm" type="password" placeholder="Confirm your password" required />
+            </label>
             <p id="signup-message" role="status" aria-live="polite" style="margin-bottom: 0.8rem; color: var(--muted);"></p>
             <button class="btn btn-primary" type="submit" style="width: 100%;">Create account</button>
           </form>
@@ -44,28 +48,84 @@
       </div>
     </main>
 
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="config.js"></script>
     <script src="components.js"></script>
     <script src="auth.js"></script>
     <script src="script.js"></script>
+    
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => {
+        // Redirect if already logged in
+        if (window.isAuthenticated && window.isAuthenticated()) {
+          window.location.href = 'profile.html';
+          return;
+        }
+
         const form = document.getElementById('signup-form');
-        const message = document.getElementById('signup-message');
+        const nameInput = document.getElementById('signup-name');
+        const emailInput = document.getElementById('signup-email');
+        const passwordInput = document.getElementById('signup-password');
+        const passwordConfirmInput = document.getElementById('signup-password-confirm');
+        const messageEl = document.getElementById('signup-message');
+        const submitBtn = form?.querySelector('button[type="submit"]');
 
-        form?.addEventListener('submit', (event) => {
+        form?.addEventListener('submit', async (event) => {
           event.preventDefault();
-          const name = document.getElementById('signup-name').value;
-          const email = document.getElementById('signup-email').value;
-          const password = document.getElementById('signup-password').value;
-          const user = window.signupUser({ name, email, password });
 
-          if (user) {
-            message.textContent = `Account created for ${user.name}.`;
-            message.style.color = '#8cf7c2';
-            window.location.href = 'index.html';
-          } else {
-            message.textContent = 'An account with that email already exists.';
-            message.style.color = '#ff9c9c';
+          // Reset message
+          messageEl.textContent = '';
+          messageEl.style.color = 'var(--muted)';
+
+          // Show loading state
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating account...';
+          }
+
+          try {
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const passwordConfirm = passwordConfirmInput.value;
+
+            const result = await window.signupUser({
+              name,
+              email,
+              password,
+              passwordConfirm,
+            });
+
+            if (result.success) {
+              messageEl.textContent = result.message || `Account created for ${result.user.name}! Redirecting...`;
+              messageEl.style.color = '#8cf7c2';
+              
+              // Redirect after short delay
+              setTimeout(() => {
+                window.location.href = 'profile.html';
+              }, 2000);
+            } else {
+              messageEl.textContent = result.error || 'Signup failed. Please try again.';
+              messageEl.style.color = '#ff9c9c';
+
+              // Reset button
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create account';
+              }
+            }
+          } catch (error) {
+            console.error('Signup error:', error);
+            messageEl.textContent = 'An unexpected error occurred. Please try again.';
+            messageEl.style.color = '#ff9c9c';
+
+            // Reset button
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Create account';
+            }
           }
         });
       });

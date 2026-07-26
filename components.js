@@ -16,11 +16,22 @@ function getCurrentPage() {
 function renderHeader() {
   const host = document.querySelector('[data-site-header]');
   if (!host) return;
+  
   const page = getCurrentPage();
-  const user = (typeof window !== 'undefined' && window.readCurrentUser) ? window.readCurrentUser() : null;
+  
+  // Use getCurrentUser() for the new async auth system
+  const user = (typeof window !== 'undefined' && window.getCurrentUser) 
+    ? window.getCurrentUser() 
+    : null;
   const isLoggedIn = Boolean(user);
+  
   const authActions = isLoggedIn
-    ? `<a class="btn btn-primary" href="profile.html" aria-label="Open profile"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.2 0-7 2.2-7 5v1h14v-1c0-2.8-2.8-5-7-5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`
+    ? `<a class="btn btn-ghost" href="profile.html" style="display: flex; align-items: center; gap: 0.5rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.2 0-7 2.2-7 5v1h14v-1c0-2.8-2.8-5-7-5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        ${user.name || 'Account'}
+      </a>`
     : `<a class="btn btn-ghost" href="login.html">Login</a><a class="btn btn-primary" href="signup.html">Sign Up</a>`;
 
   host.innerHTML = `
@@ -47,6 +58,17 @@ function renderHeader() {
       </div>
     </header>
   `;
+}
+
+// Listen for auth changes and update header
+function setupAuthListener() {
+  if (typeof window !== 'undefined' && window.onAuthChange) {
+    window.onAuthChange((event) => {
+      if (event.type === 'LOGIN' || event.type === 'LOGOUT' || event.type === 'SIGNUP') {
+        renderHeader();
+      }
+    });
+  }
 }
 
 function renderFooter() {
@@ -108,5 +130,6 @@ if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     renderHeader();
     renderFooter();
+    setupAuthListener();
   });
 }

@@ -1,127 +1,336 @@
+/**
+ * Authentication Module - Supabase-based
+ * Handles user signup, login, logout, and session management
+ */
+
+// ============================================================================
+// CONSTANTS & STATE
+// ============================================================================
+
 const AUTH_STORAGE_KEYS = {
-  users: 'lumen_users',
   currentUser: 'lumen_current_user',
+  sessionToken: 'lumen_session_token',
 };
 
-function readUsers() {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEYS.users);
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+let currentUser = null;
+let authListeners = [];
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+async function initAuth() {
+  const supabase = await initSupabase();
+  
+  if (!supabase) {
+    console.error('Supabase not initialized');
+    return;
   }
-  if (typeof globalThis.localStorage !== 'undefined') {
-    const raw = globalThis.localStorage.getItem(AUTH_STORAGE_KEYS.users);
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+
+  // Restore session from localStorage or Supabase
+  await restoreSession();
+
+  // Listen for auth changes
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      currentUser = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.user_metadata?.name || session.user.email,
+        createdAt: session.user.created_at,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
+      notifyListeners({ type: 'LOGIN', user: currentUser });
+    } else {
+      currentUser = null;
+      localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
+      notifyListeners({ type: 'LOGOUT' });
     }
-  }
-  return [];
+  });
+
+  return subscription;
 }
 
-function persistUsers(users) {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.setItem(AUTH_STORAGE_KEYS.users, JSON.stringify(users));
-  }
-  if (typeof globalThis.localStorage !== 'undefined') {
-    globalThis.localStorage.setItem(AUTH_STORAGE_KEYS.users, JSON.stringify(users));
+async function restoreSession() {
+  const supabase = await initSupabase();
+  if (!supabase) return;
+
+  try {
+    // Check for existing session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      currentUser = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.user_metadata?.name || session.user.email,
+        createdAt: session.user.created_at,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
+      notifyListeners({ type: 'SESSION_RESTORED', user: currentUser });
+    } else {
+      // Try to restore from localStorage (fallback)
+      const stored = localStorage.getItem(AUTH_STORAGE_KEYS.currentUser);
+      if (stored) {
+        try {
+          currentUser = JSON.parse(stored);
+        } catch {
+          currentUser = null;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error restoring session:', error);
   }
 }
 
-function readCurrentUser() {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEYS.currentUser);
-    return raw ? JSON.parse(raw) : null;
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(String(email).toLowerCase());
+}
+
+function validatePassword(password) {
+  const minLength = 6;
+  return String(password || '').length >= minLength;
+}
+
+function validateSignupData({ name, email, password, passwordConfirm }) {
+  const errors = {};
+
+  if (!name || !name.trim()) {
+    errors.name = 'Full name is required';
+  } else if (name.trim().length < 2) {
+    errors.name = 'Name must be at least 2 characters';
   }
-  if (typeof globalThis.localStorage !== 'undefined') {
-    const raw = globalThis.localStorage.getItem(AUTH_STORAGE_KEYS.currentUser);
-    return raw ? JSON.parse(raw) : null;
+
+  if (!email || !email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!validateEmail(email)) {
+    errors.email = 'Please enter a valid email address';
   }
-  return null;
+
+  if (!password) {
+    errors.password = 'Password is required';
+  } else if (!validatePassword(password)) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+
+  if (password !== passwordConfirm) {
+    errors.passwordConfirm = 'Passwords do not match';
+  }
+
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+function validateLoginData({ email, password }) {
+  const errors = {};
+
+  if (!email || !email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!validateEmail(email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+
+  if (!password) {
+    errors.password = 'Password is required';
+  }
+
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+// ============================================================================
+// AUTHENTICATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Sign up a new user with email and password
+ * @param {Object} data - { name, email, password, passwordConfirm }
+ * @returns {Object} - { success, user, error }
+ */
+async function signupUser({ name, email, password, passwordConfirm }) {
+  const supabase = await initSupabase();
+  if (!supabase) return { success: false, error: 'Auth not initialized' };
+
+  // Validate input
+  const { isValid, errors } = validateSignupData({ name, email, password, passwordConfirm });
+  if (!isValid) {
+    return { success: false, error: Object.values(errors)[0], fieldErrors: errors };
+  }
+
+  try {
+    // Sign up with Supabase
+    const { data, error: signupError } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: {
+          name: name.trim(),
+        },
+      },
+    });
+
+    if (signupError) {
+      let errorMessage = signupError.message;
+      if (errorMessage.includes('already registered')) {
+        errorMessage = 'This email is already registered. Please log in instead.';
+      } else if (errorMessage.includes('invalid')) {
+        errorMessage = 'Please check your email and password.';
+      }
+      return { success: false, error: errorMessage };
+    }
+
+    if (data?.user) {
+      currentUser = {
+        id: data.user.id,
+        email: data.user.email,
+        name: name.trim(),
+        createdAt: data.user.created_at,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
+      notifyListeners({ type: 'SIGNUP', user: currentUser });
+
+      return {
+        success: true,
+        user: currentUser,
+        message: 'Account created! Check your email to confirm.',
+      };
+    }
+
+    return { success: false, error: 'Signup failed. Please try again.' };
+  } catch (error) {
+    console.error('Signup error:', error);
+    return { success: false, error: error.message || 'An error occurred during signup.' };
+  }
+}
+
+/**
+ * Log in a user with email and password
+ * @param {string} email
+ * @param {string} password
+ * @returns {Object} - { success, user, error }
+ */
+async function loginUser(email, password) {
+  const supabase = await initSupabase();
+  if (!supabase) return { success: false, error: 'Auth not initialized' };
+
+  // Validate input
+  const { isValid, errors } = validateLoginData({ email, password });
+  if (!isValid) {
+    return { success: false, error: Object.values(errors)[0], fieldErrors: errors };
+  }
+
+  try {
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (loginError) {
+      let errorMessage = loginError.message;
+      if (errorMessage.includes('invalid') || errorMessage.includes('credentials')) {
+        errorMessage = 'Invalid email or password.';
+      }
+      return { success: false, error: errorMessage };
+    }
+
+    if (data?.user) {
+      currentUser = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || data.user.email,
+        createdAt: data.user.created_at,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
+      notifyListeners({ type: 'LOGIN', user: currentUser });
+
+      return { success: true, user: currentUser };
+    }
+
+    return { success: false, error: 'Login failed. Please try again.' };
+  } catch (error) {
+    console.error('Login error:', error);
+    return { success: false, error: error.message || 'An error occurred during login.' };
+  }
+}
+
+/**
+ * Log out the current user
+ * @returns {Object} - { success, error }
+ */
+async function logoutUser() {
+  const supabase = await initSupabase();
+  if (!supabase) return { success: false, error: 'Auth not initialized' };
+
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    currentUser = null;
+    localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
+    notifyListeners({ type: 'LOGOUT' });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Logout error:', error);
+    return { success: false, error: error.message || 'An error occurred during logout.' };
+  }
+}
+
+// ============================================================================
+// SESSION & STATE MANAGEMENT
+// ============================================================================
+
+function getCurrentUser() {
+  return currentUser;
 }
 
 function isAuthenticated() {
-  return Boolean(readCurrentUser());
+  return Boolean(currentUser);
 }
 
-function writeCurrentUser(user) {
-  const payload = user ? JSON.stringify(user) : null;
-  if (typeof window !== 'undefined' && window.localStorage) {
-    if (payload) window.localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, payload);
-    else window.localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
-  }
-  if (typeof globalThis.localStorage !== 'undefined') {
-    if (payload) globalThis.localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, payload);
-    else globalThis.localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
-  }
-}
-
-function signupUser({ name, email, password }) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const normalizedName = String(name || '').trim();
-  const normalizedPassword = String(password || '').trim();
-
-  if (!normalizedEmail || !normalizedName || !normalizedPassword) {
-    return null;
-  }
-
-  const users = readUsers();
-  if (users.some((user) => user.email === normalizedEmail)) {
-    return null;
-  }
-
-  const user = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    name: normalizedName,
-    email: normalizedEmail,
-    password: normalizedPassword,
-    createdAt: new Date().toISOString(),
+function getAuthState() {
+  return {
+    isAuthenticated: isAuthenticated(),
+    user: currentUser,
   };
-
-  users.push(user);
-  persistUsers(users);
-  writeCurrentUser(user);
-  return user;
 }
 
-function loginUser(email, password) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const normalizedPassword = String(password || '').trim();
-  const users = readUsers();
-  const user = users.find((entry) => entry.email === normalizedEmail && entry.password === normalizedPassword);
-
-  if (!user) {
-    writeCurrentUser(null);
-    return null;
-  }
-
-  const sessionUser = { id: user.id, name: user.name, email: user.email };
-  writeCurrentUser(sessionUser);
-  return sessionUser;
+function onAuthChange(callback) {
+  authListeners.push(callback);
+  return () => {
+    authListeners = authListeners.filter(listener => listener !== callback);
+  };
 }
 
-function logoutUser() {
-  writeCurrentUser(null);
+function notifyListeners(event) {
+  authListeners.forEach(listener => {
+    try {
+      listener(event);
+    } catch (error) {
+      console.error('Auth listener error:', error);
+    }
+  });
+}
+
+function readCurrentUser() {
+  return getCurrentUser();
 }
 
 function clearAuthData() {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.removeItem(AUTH_STORAGE_KEYS.users);
-    window.localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
-  }
-  if (typeof globalThis.localStorage !== 'undefined') {
-    globalThis.localStorage.removeItem(AUTH_STORAGE_KEYS.users);
-    globalThis.localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
-  }
+  currentUser = null;
+  localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
 }
+
+// ============================================================================
+// AUTO-INITIALIZATION & EXPORTS
+// ============================================================================
 
 if (typeof window !== 'undefined') {
   window.signupUser = signupUser;
@@ -129,6 +338,15 @@ if (typeof window !== 'undefined') {
   window.logoutUser = logoutUser;
   window.clearAuthData = clearAuthData;
   window.readCurrentUser = readCurrentUser;
+  window.isAuthenticated = isAuthenticated;
+  window.getCurrentUser = getCurrentUser;
+  window.getAuthState = getAuthState;
+  window.onAuthChange = onAuthChange;
+  window.initAuth = initAuth;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initAuth().catch(error => console.error('Auth init error:', error));
+  });
 }
 
 if (typeof module !== 'undefined') {
@@ -139,5 +357,9 @@ if (typeof module !== 'undefined') {
     clearAuthData,
     readCurrentUser,
     isAuthenticated,
+    getCurrentUser,
+    getAuthState,
+    onAuthChange,
+    initAuth,
   };
 }

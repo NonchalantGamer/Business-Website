@@ -41,28 +41,66 @@
     </main>
 
     <div data-site-footer></div>
+    
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="config.js"></script>
     <script src="components.js"></script>
     <script src="auth.js"></script>
+    <script src="route-protection.js"></script>
     <script src="script.js"></script>
+    
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const user = window.readCurrentUser();
+      document.addEventListener('DOMContentLoaded', async () => {
         const nameNode = document.getElementById('profile-name');
         const emailNode = document.getElementById('profile-email');
         const logoutButton = document.getElementById('logout-button');
 
+        // Wait for auth initialization
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const user = window.getCurrentUser();
+
         if (!user) {
+          console.warn('User not authenticated, redirecting to login');
           window.location.href = 'login.html';
           return;
         }
 
-        nameNode.textContent = user.name;
-        emailNode.textContent = user.email;
+        // Display user info
+        nameNode.textContent = user.name || 'User';
+        emailNode.textContent = user.email || 'No email';
 
-        logoutButton?.addEventListener('click', () => {
-          window.logoutUser();
-          window.location.href = 'index.html';
+        logoutButton?.addEventListener('click', async () => {
+          logoutButton.disabled = true;
+          logoutButton.textContent = 'Logging out...';
+
+          try {
+            const result = await window.logoutUser();
+            if (result.success) {
+              window.location.href = 'index.html';
+            } else {
+              alert('Logout failed: ' + result.error);
+              logoutButton.disabled = false;
+              logoutButton.textContent = 'Log out';
+            }
+          } catch (error) {
+            console.error('Logout error:', error);
+            alert('An error occurred during logout');
+            logoutButton.disabled = false;
+            logoutButton.textContent = 'Log out';
+          }
         });
+
+        // Listen for auth changes
+        if (window.onAuthChange) {
+          window.onAuthChange((event) => {
+            if (event.type === 'LOGOUT') {
+              window.location.href = 'index.html';
+            }
+          });
+        }
       });
     </script>
   </body>
