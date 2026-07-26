@@ -151,6 +151,29 @@ function validateLoginData({ email, password }) {
  * @param {Object} data - { name, email, password, passwordConfirm }
  * @returns {Object} - { success, user, error }
  */
+
+/**
+ * Log in or Sign up with Google OAuth
+ */
+async function loginWithGoogle() {
+  const supabase = await initSupabase();
+  if (!supabase) return { success: false, error: 'Auth not initialized' };
+
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/index.html`
+      }
+    });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    return { success: false, error: error.message };
+  }
+}
 async function signupUser({ name, email, password, passwordConfirm }) {
   const supabase = await initSupabase();
   if (!supabase) return { success: false, error: 'Auth not initialized' };
@@ -343,6 +366,7 @@ if (typeof window !== 'undefined') {
   window.getAuthState = getAuthState;
   window.onAuthChange = onAuthChange;
   window.initAuth = initAuth;
+  window.loginWithGoogle = loginWithGoogle;
 
   document.addEventListener('DOMContentLoaded', () => {
     initAuth().catch(error => console.error('Auth init error:', error));
@@ -351,6 +375,7 @@ if (typeof window !== 'undefined') {
 
 if (typeof module !== 'undefined') {
   module.exports = {
+    loginWithGoogle,
     signupUser,
     loginUser,
     logoutUser,
