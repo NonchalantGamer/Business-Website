@@ -148,6 +148,110 @@
 
         let currentProfile = null;
         let selectedAvatarUrl = '';
+        let pendingAvatarFile = null;
+        let avatarMarkedForRemoval = false;
+
+        const MAX_UPLOAD_BYTES = 1 * 1024 * 1024;
+        const AVATAR_BUCKET = 'avatars';
+
+        const getSupabaseClient = async () => {
+          const supabase = window.getSupabase && (await window.getSupabase());
+          if (!supabase) {
+            throw new Error('Storage is not available right now. Please refresh and try again.');
+          }
+          return supabase;
+        };
+
+        const sanitizeFileName = (name) =>
+          String(name || 'avatar')
+            .toLowerCase()
+            .replace(/[^a-z0-9.-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 60) || 'avatar';
+
+        const dataUrlToBlob = (dataUrl) => {
+          const parts = String(dataUrl || '').split(',');
+          if (parts.length !== 2) {
+            throw new Error('Invalid image data. Please choose a different photo.');
+          }
+          const mimeMatch = parts[0].match(/data:([^;]+);base64/i);
+          const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+          const binary = atob(parts[1]);
+          const bytes = new Uint8Array(binary.length);
+          for (let index = 0; index < binary.length; index += 1) {
+            bytes[index] = binary.charCodeAt(index);
+          }
+          return new Blob([bytes], { type: mimeType });
+        };
+
+        const compressImageFile = (file) =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Unable to read selected image.'));
+            reader.onload = () => {
+              const source = new Image();
+              source.onerror = () => reject(new Error('Unable to process selected image.'));
+              source.onload = async () => {
+                const maxDimension = 900;
+                const scale = Math.min(maxDimension / source.width, maxDimension / source.height, 1);
+                const targetWidth = Math.max(1, Math.round(source.width * scale));
+                const targetHeight = Math.max(1, Math.round(source.height * scale));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const context = canvas.getContext('2d', { alpha: false });
+                if (!context) {
+                  reject(new Error('Unable to initialize image processing.'));
+                  return;
+                }
+
+                context.drawImage(source, 0, 0, targetWidth, targetHeight);
+
+                const attempts = [0.82, 0.72, 0.62, 0.52, 0.44];
+                for (const quality of attempts) {
+                  const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                  const blob = dataUrlToBlob(dataUrl);
+                  if (blob.size <= MAX_UPLOAD_BYTES) {
+                    resolve({ blob, previewUrl: dataUrl });
+                    return;
+                  }
+                }
+
+                reject(new Error('Image is still too large after compression. Please choose a smaller image.'));
+              };
+              source.src = String(reader.result || '');
+            };
+            reader.readAsDataURL(file);
+          });
+
+        const uploadAvatarImage = async (file, userId) => {
+          const supabase = await getSupabaseClient();
+          const extension = (file.type.split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'jpg';
+          const fileName = `${Date.now()}-${sanitizeFileName(file.name)}.${extension}`;
+          const path = `${userId}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from(AVATAR_BUCKET)
+            .upload(path, file, {
+              cacheControl: '3600',
+              upsert: true,
+              contentType: file.type || 'image/jpeg',
+            });
+
+          if (uploadError) {
+            throw new Error(uploadError.message || 'Avatar upload failed.');
+          }
+
+          const { data: publicData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+          const publicUrl = publicData && publicData.publicUrl;
+          if (!publicUrl) {
+            throw new Error('Could not create avatar URL.');
+          }
+
+          return publicUrl;
+        };
 
         const setMessage = (text, color = 'var(--muted)') => {
           messageEl.textContent = text;
@@ -182,6 +286,8 @@
           };
 
           selectedAvatarUrl = currentProfile.avatarUrl;
+          pendingAvatarFile = null;
+          avatarMarkedForRemoval = false;
           nameInput.value = currentProfile.name;
           emailInput.value = currentProfile.email;
           bioInput.value = currentProfile.bio;
@@ -227,16 +333,27 @@
             return;
           }
 
-          const reader = new FileReader();
-          reader.onload = () => {
-            selectedAvatarUrl = String(reader.result || '');
-            renderAvatar(selectedAvatarUrl, nameInput.value || currentProfile.name);
-            setMessage('Avatar selected. Save changes to keep it.', 'var(--accent)');
-          };
-          reader.readAsDataURL(file);
+          setMessage('Optimizing image...');
+          compressImageFile(file)
+            .then(({ blob, previewUrl }) => {
+              const optimizedName = file.name.replace(/\.[^/.]+$/, '') || 'avatar';
+              pendingAvatarFile = new File([blob], `${optimizedName}.jpg`, { type: 'image/jpeg' });
+              avatarMarkedForRemoval = false;
+              selectedAvatarUrl = previewUrl;
+              renderAvatar(selectedAvatarUrl, nameInput.value || currentProfile.name);
+              setMessage('Avatar selected. Save changes to upload it.', 'var(--accent)');
+            })
+            .catch((error) => {
+              console.error('Avatar preparation error:', error);
+              pendingAvatarFile = null;
+              avatarInput.value = '';
+              setMessage(error.message || 'Could not prepare this image. Try another one.', '#ff9c9c');
+            });
         });
 
         removePhotoButton?.addEventListener('click', () => {
+          pendingAvatarFile = null;
+          avatarMarkedForRemoval = true;
           selectedAvatarUrl = '';
           if (avatarInput) avatarInput.value = '';
           renderAvatar('', nameInput.value || currentProfile.name);
@@ -245,6 +362,7 @@
 
         resetButton?.addEventListener('click', () => {
           fillForm(window.getCurrentUser());
+          if (avatarInput) avatarInput.value = '';
           setMessage('Form reset.');
         });
 
@@ -261,6 +379,7 @@
             const name = nameInput.value.trim();
             const email = emailInput.value.trim();
             const bio = bioInput.value.trim();
+            let avatarUrlToSave = currentProfile?.avatarUrl || '';
 
             if (!name) {
               setMessage('Please enter your name.', '#ff9c9c');
@@ -272,16 +391,24 @@
               return;
             }
 
+            if (avatarMarkedForRemoval) {
+              avatarUrlToSave = '';
+            } else if (pendingAvatarFile) {
+              setMessage('Uploading avatar...');
+              avatarUrlToSave = await uploadAvatarImage(pendingAvatarFile, user.id);
+            }
+
             const result = await window.updateProfile({
               name,
               email,
               bio,
-              avatarUrl: selectedAvatarUrl,
+              avatarUrl: avatarUrlToSave,
             });
 
             if (result.success) {
               currentProfile = result.user || window.getCurrentUser();
               fillForm(currentProfile);
+              if (avatarInput) avatarInput.value = '';
               setMessage(result.message || 'Profile saved successfully.', '#8cf7c2');
             } else {
               setMessage(result.error || 'Unable to save profile.', '#ff9c9c');
