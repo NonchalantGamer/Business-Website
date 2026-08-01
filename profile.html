@@ -221,8 +221,8 @@
             return;
           }
 
-          if (file.size > 4 * 1024 * 1024) {
-            setMessage('Please choose an image smaller than 4 MB.', '#ff9c9c');
+          if (file.size > 1 * 1024 * 1024) {
+            setMessage('Please choose an image smaller than 1 MB.', '#ff9c9c');
             avatarInput.value = '';
             return;
           }
