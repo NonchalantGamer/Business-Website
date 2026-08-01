@@ -50,7 +50,14 @@ function injectBrandIcons() {
 
 function getCurrentPage() {
   const path = window.location.pathname.split('/').pop() || 'index.html';
-  return path.replace('.html', '') || 'home';
+  const base = (path.replace('.html', '') || 'home').toLowerCase();
+
+  const routeAliases = {
+    index: 'home',
+    'use-cases': 'useCases',
+  };
+
+  return routeAliases[base] || base;
 }
 
 function setupHeaderInteractions(host) {
@@ -199,7 +206,7 @@ function renderHeader() {
         <div class="nav-panel" id="primary-navigation" data-nav-panel aria-hidden="true">
           <nav class="nav-links" aria-label="Primary navigation">
             ${Object.entries(siteRoutes).map(([key, item]) => {
-              const isActive = page === key || (page === 'home' && key === 'home');
+              const isActive = page === key;
               return `<a class="nav-link ${isActive ? 'active' : ''}" href="${item.href}" ${isActive ? 'aria-current="page"' : ''}>${item.label}</a>`;
             }).join('')}
           </nav>
