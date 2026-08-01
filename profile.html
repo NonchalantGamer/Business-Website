@@ -151,7 +151,7 @@
         let pendingAvatarFile = null;
         let avatarMarkedForRemoval = false;
 
-        const MAX_UPLOAD_BYTES = 1 * 1024 * 1024;
+        const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
         const AVATAR_BUCKET = 'avatars';
 
         const getSupabaseClient = async () => {
@@ -170,59 +170,11 @@
             .replace(/^-|-$/g, '')
             .slice(0, 60) || 'avatar';
 
-        const dataUrlToBlob = (dataUrl) => {
-          const parts = String(dataUrl || '').split(',');
-          if (parts.length !== 2) {
-            throw new Error('Invalid image data. Please choose a different photo.');
-          }
-          const mimeMatch = parts[0].match(/data:([^;]+);base64/i);
-          const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-          const binary = atob(parts[1]);
-          const bytes = new Uint8Array(binary.length);
-          for (let index = 0; index < binary.length; index += 1) {
-            bytes[index] = binary.charCodeAt(index);
-          }
-          return new Blob([bytes], { type: mimeType });
-        };
-
-        const compressImageFile = (file) =>
+        const readFileAsDataUrl = (file) =>
           new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onerror = () => reject(new Error('Unable to read selected image.'));
-            reader.onload = () => {
-              const source = new Image();
-              source.onerror = () => reject(new Error('Unable to process selected image.'));
-              source.onload = async () => {
-                const maxDimension = 900;
-                const scale = Math.min(maxDimension / source.width, maxDimension / source.height, 1);
-                const targetWidth = Math.max(1, Math.round(source.width * scale));
-                const targetHeight = Math.max(1, Math.round(source.height * scale));
-
-                const canvas = document.createElement('canvas');
-                canvas.width = targetWidth;
-                canvas.height = targetHeight;
-                const context = canvas.getContext('2d', { alpha: false });
-                if (!context) {
-                  reject(new Error('Unable to initialize image processing.'));
-                  return;
-                }
-
-                context.drawImage(source, 0, 0, targetWidth, targetHeight);
-
-                const attempts = [0.82, 0.72, 0.62, 0.52, 0.44];
-                for (const quality of attempts) {
-                  const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                  const blob = dataUrlToBlob(dataUrl);
-                  if (blob.size <= MAX_UPLOAD_BYTES) {
-                    resolve({ blob, previewUrl: dataUrl });
-                    return;
-                  }
-                }
-
-                reject(new Error('Image is still too large after compression. Please choose a smaller image.'));
-              };
-              source.src = String(reader.result || '');
-            };
+            reader.onload = () => resolve(String(reader.result || ''));
             reader.readAsDataURL(file);
           });
 
@@ -327,27 +279,26 @@
             return;
           }
 
-          if (file.size > 1 * 1024 * 1024) {
-            setMessage('Please choose an image smaller than 1 MB.', '#ff9c9c');
+          if (file.size > MAX_UPLOAD_BYTES) {
+            setMessage('Please choose an image smaller than 5 MB.', '#ff9c9c');
             avatarInput.value = '';
             return;
           }
 
-          setMessage('Optimizing image...');
-          compressImageFile(file)
-            .then(({ blob, previewUrl }) => {
-              const optimizedName = file.name.replace(/\.[^/.]+$/, '') || 'avatar';
-              pendingAvatarFile = new File([blob], `${optimizedName}.jpg`, { type: 'image/jpeg' });
+          setMessage('Preparing image...');
+          readFileAsDataUrl(file)
+            .then((previewUrl) => {
+              pendingAvatarFile = file;
               avatarMarkedForRemoval = false;
               selectedAvatarUrl = previewUrl;
               renderAvatar(selectedAvatarUrl, nameInput.value || currentProfile.name);
               setMessage('Avatar selected. Save changes to upload it.', 'var(--accent)');
             })
             .catch((error) => {
-              console.error('Avatar preparation error:', error);
+              console.error('Avatar read error:', error);
               pendingAvatarFile = null;
               avatarInput.value = '';
-              setMessage(error.message || 'Could not prepare this image. Try another one.', '#ff9c9c');
+              setMessage(error.message || 'Could not read this image. Try another one.', '#ff9c9c');
             });
         });
 
