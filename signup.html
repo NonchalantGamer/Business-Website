@@ -77,10 +77,30 @@
 
         const googleBtn = document.getElementById('google-signup-btn');
         googleBtn?.addEventListener('click', async () => {
-          if (window.loginWithGoogle) {
-            await window.loginWithGoogle();
-          } else {
+          if (!window.loginWithGoogle) {
             console.error('loginWithGoogle function is missing from auth.js');
+            messageEl.textContent = 'Google sign-in is unavailable right now.';
+            messageEl.style.color = '#ff9c9c';
+            return;
+          }
+
+          googleBtn.disabled = true;
+          googleBtn.textContent = 'Connecting to Google...';
+
+          try {
+            const result = await window.loginWithGoogle();
+            if (!result?.success) {
+              messageEl.textContent = result?.error || 'Google sign-in failed. Please try again.';
+              messageEl.style.color = '#ff9c9c';
+              googleBtn.disabled = false;
+              googleBtn.textContent = 'Continue with Google';
+            }
+          } catch (error) {
+            console.error('Google sign-in error:', error);
+            messageEl.textContent = 'Google sign-in failed. Please try again.';
+            messageEl.style.color = '#ff9c9c';
+            googleBtn.disabled = false;
+            googleBtn.textContent = 'Continue with Google';
           }
         });
 

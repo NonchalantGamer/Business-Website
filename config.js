@@ -4,8 +4,9 @@
  * Get them from: https://app.supabase.com/project/Business-Website/settings/api
  */
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rfibvngppotttdtnelvf.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmaWJ2bmdwcG90dHRkdG5lbHZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwMTQwODksImV4cCI6MjEwMDU5MDA4OX0.cb5Sy2n3dMBrfugqPr6dWocrBioUbPBecFJX8J91uX4';
+const browserEnv = typeof process !== 'undefined' && process?.env ? process.env : {};
+const SUPABASE_URL = browserEnv.SUPABASE_URL || 'https://rfibvngppotttdtnelvf.supabase.co';
+const SUPABASE_ANON_KEY = browserEnv.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmaWJ2bmdwcG90dHRkdG5lbHZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwMTQwODksImV4cCI6MjEwMDU5MDA4OX0.cb5Sy2n3dMBrfugqPr6dWocrBioUbPBecFJX8J91uX4';
 
 // Initialize Supabase client (CDN import)
 // Add this to your HTML: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
