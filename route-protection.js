@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = {
   'index.html': true,
   'login.html': true,
   'signup.html': true,
+  'auth-callback.html': true,
   'about.html': true,
   'features.html': true,
   'use-cases.html': true,

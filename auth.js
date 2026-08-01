@@ -155,7 +155,7 @@ function validateLoginData({ email, password }) {
 /**
  * Log in or Sign up with Google OAuth
  */
-async function loginWithGoogle() {
+async function loginWithGoogle(options = {}) {
   let supabase;
   try {
     supabase = await initSupabase();
@@ -174,12 +174,13 @@ async function loginWithGoogle() {
   }
 
   try {
-    const redirectUrl = new URL('index.html', window.location.href).href;
+    const redirectUrl = new URL('auth-callback.html', window.location.href);
+    redirectUrl.searchParams.set('next', options.redirectPath || 'profile.html');
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl
+        redirectTo: redirectUrl.href
       }
     });
 

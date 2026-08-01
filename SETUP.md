@@ -65,7 +65,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
 4. Go to **"Email Templates"**
 5. Customize confirmation email if needed (optional)
 
-### Step 6: Test Locally
+### Step 6: Enable Google OAuth in Supabase
+
+1. In Supabase Dashboard, go to **Authentication** > **Providers**
+2. Enable **Google**
+3. Add the Google client ID and client secret from Google Cloud Console
+4. Add these redirect URLs in **Authentication** > **URL Configuration**:
+  - `http://localhost:8000/auth-callback.html`
+  - Your deployed callback URL, for example `https://your-domain.com/auth-callback.html`
+
+### Step 7: Test Locally
 
 1. Open `http://localhost:8000` (or your local server)
 2. Click **"Get Started"** or go to `/signup.html`

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Completing Cosmo3D authentication." />
+    <title>Signing in | Cosmo3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="auth-callback">
+    <main class="auth-page">
+      <div class="container">
+        <div class="auth-card reveal" style="text-align: center;">
+          <span class="eyebrow">Almost there</span>
+          <h1 style="margin: 0.75rem 0 0.5rem;">Completing Google sign-in</h1>
+          <p id="callback-message" style="color: var(--muted);">Waiting for Supabase to finish your session...</p>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        const messageEl = document.getElementById('callback-message');
+        const targetPage = new URLSearchParams(window.location.search).get('next') || 'profile.html';
+        let redirected = false;
+
+        const finish = (message) => {
+          if (redirected) return;
+          redirected = true;
+          if (messageEl && message) {
+            messageEl.textContent = message;
+          }
+          window.location.replace(targetPage);
+        };
+
+        if (window.onAuthChange) {
+          window.onAuthChange((event) => {
+            if (event.type === 'LOGIN' || event.type === 'SESSION_RESTORED') {
+              finish('Sign-in complete. Redirecting...');
+            }
+          });
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+
+        if (window.isAuthenticated && window.isAuthenticated()) {
+          finish('Sign-in complete. Redirecting...');
+          return;
+        }
+
+        if (messageEl) {
+          messageEl.textContent = 'If this takes too long, return to the login page and try again.';
+        }
+      });
+    </script>
+  </body>
+</html>

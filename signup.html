@@ -88,7 +88,7 @@
           googleBtn.textContent = 'Connecting to Google...';
 
           try {
-            const result = await window.loginWithGoogle();
+            const result = await window.loginWithGoogle({ redirectPath: 'profile.html' });
             if (!result?.success) {
               messageEl.textContent = result?.error || 'Google sign-in failed. Please try again.';
               messageEl.style.color = '#ff9c9c';
