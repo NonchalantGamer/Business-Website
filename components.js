@@ -53,6 +53,40 @@ function getCurrentPage() {
   return path.replace('.html', '') || 'home';
 }
 
+function setupHeaderInteractions(host) {
+  const header = host?.querySelector('.site-header');
+  const toggleButton = host?.querySelector('[data-nav-toggle]');
+  const navPanel = host?.querySelector('[data-nav-panel]');
+
+  if (!header || !toggleButton || !navPanel) return;
+
+  const setOpen = (isOpen) => {
+    header.classList.toggle('nav-open', isOpen);
+    toggleButton.setAttribute('aria-expanded', String(isOpen));
+    navPanel.setAttribute('aria-hidden', String(!isOpen));
+  };
+
+  toggleButton.addEventListener('click', () => {
+    setOpen(!header.classList.contains('nav-open'));
+  });
+
+  navPanel.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => setOpen(false));
+  });
+
+  if (window.__cosmoHeaderResizeHandler) {
+    window.removeEventListener('resize', window.__cosmoHeaderResizeHandler);
+  }
+
+  window.__cosmoHeaderResizeHandler = () => {
+    if (window.innerWidth > 720) {
+      setOpen(false);
+    }
+  };
+
+  window.addEventListener('resize', window.__cosmoHeaderResizeHandler, { passive: true });
+}
+
 function renderHeader() {
   const host = document.querySelector('[data-site-header]');
   if (!host) return;
@@ -85,18 +119,28 @@ function renderHeader() {
           </span>
           <span>Cosmo3D</span>
         </a>
-        <nav class="nav-links" aria-label="Primary navigation">
-          ${Object.entries(siteRoutes).map(([key, item]) => {
-            const isActive = page === key || (page === 'home' && key === 'home');
-            return `<a class="nav-link ${isActive ? 'active' : ''}" href="${item.href}" ${isActive ? 'aria-current="page"' : ''}>${item.label}</a>`;
-          }).join('')}
-        </nav>
-        <div class="nav-actions">
-          ${authActions}
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-nav-toggle>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span class="nav-toggle-label">Menu</span>
+        </button>
+        <div class="nav-panel" id="primary-navigation" data-nav-panel aria-hidden="true">
+          <nav class="nav-links" aria-label="Primary navigation">
+            ${Object.entries(siteRoutes).map(([key, item]) => {
+              const isActive = page === key || (page === 'home' && key === 'home');
+              return `<a class="nav-link ${isActive ? 'active' : ''}" href="${item.href}" ${isActive ? 'aria-current="page"' : ''}>${item.label}</a>`;
+            }).join('')}
+          </nav>
+          <div class="nav-actions">
+            ${authActions}
+          </div>
         </div>
       </div>
     </header>
   `;
+
+  setupHeaderInteractions(host);
 }
 
 // Listen for auth changes and update header

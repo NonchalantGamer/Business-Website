@@ -83,6 +83,7 @@ p { color: var(--muted); margin: 0; }
   align-items: center;
   justify-content: space-between;
   min-height: 74px;
+  gap: 1rem;
 }
 .brand {
   display: inline-flex;
@@ -123,6 +124,11 @@ p { color: var(--muted); margin: 0; }
   align-items: center;
   gap: 1.2rem;
 }
+.nav-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 .nav-link {
   color: var(--muted);
   font-weight: 500;
@@ -132,6 +138,28 @@ p { color: var(--muted); margin: 0; }
   color: var(--text);
 }
 .nav-actions { display: flex; gap: 0.75rem; align-items: center; }
+.nav-toggle {
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.72rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  cursor: pointer;
+}
+.nav-toggle span:not(.nav-toggle-label) {
+  width: 1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  display: block;
+}
+.nav-toggle-label {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
 
 .btn {
   display: inline-flex;
@@ -588,17 +616,86 @@ input:focus, textarea:focus { outline: 2px solid rgba(83,215,255,0.35); border-c
   .logo-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .testimonial-grid, .team-grid, .blog-grid, .pricing-grid, .benefits-grid, .footer-grid { grid-template-columns: 1fr 1fr; }
   .steps, .use-case-grid { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-hero-stats { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 720px) {
-  .nav-links { display: none; }
-  .hero { padding-top: 3rem; }
-  .hero-actions { flex-direction: column; align-items: flex-start; }
+  .container { width: min(var(--max), calc(100% - 1rem)); }
+  .navbar { position: relative; min-height: 68px; }
+  .nav-toggle { display: inline-flex; }
+  .nav-panel {
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    left: 0;
+    right: 0;
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 24px;
+    background: rgba(6, 8, 20, 0.96);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    pointer-events: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 220ms ease, transform 220ms ease, max-height 260ms ease;
+    z-index: 20;
+  }
+  .site-header.nav-open .nav-panel {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    max-height: 80vh;
+  }
+  .nav-links {
+    display: grid;
+    gap: 0.4rem;
+    align-items: stretch;
+  }
+  .nav-link {
+    padding: 0.9rem 0.95rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.04);
+  }
+  .nav-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .nav-actions .btn { width: 100%; }
+  .hero { padding-top: 2.4rem; }
+  .hero-grid { gap: 1.5rem; }
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .hero-actions .btn { width: 100%; }
+  .hero-metrics { gap: 0.75rem; }
+  .metric-card { min-width: 0; flex: 1 1 100%; }
   .logo-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-grid, .testimonial-grid, .team-grid, .blog-grid, .pricing-grid, .benefits-grid, .footer-grid { grid-template-columns: 1fr; }
   .demo-frame { grid-template-columns: 1fr; }
   .demo-sidebar { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .page-shell { padding-top: 4rem; }
+  .page-shell { padding-top: 3.5rem; }
+  .section { padding: 3.5rem 0; }
+  h1 { font-size: clamp(2rem, 10vw, 3rem); }
+  h2 { font-size: clamp(1.6rem, 7vw, 2.2rem); }
+  .profile-hero-main { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+  .profile-hero-actions { justify-content: center; }
+  .profile-hero-stats { grid-template-columns: 1fr; }
+  .profile-grid { gap: 1rem; }
+  .profile-panel { padding: 1.15rem; }
+  .profile-snapshot-row { flex-direction: column; align-items: flex-start; }
+  .profile-snapshot-row strong { text-align: left; }
+  .profile-avatar { width: 6.4rem; height: 6.4rem; }
+  .auth-card { width: min(100%, 460px); }
+}
+
+@media (max-width: 520px) {
+  .container { width: min(var(--max), calc(100% - 0.9rem)); }
+  .navbar { min-height: 64px; }
+  .brand { gap: 0.55rem; }
+  .brand > span:last-child { font-size: 0.98rem; }
+  .nav-panel { top: calc(100% + 0.5rem); padding: 0.85rem; }
+  .nav-actions { grid-template-columns: 1fr; }
+  .btn { padding: 0.8rem 1rem; }
+  .profile-avatar { width: 5.8rem; height: 5.8rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
