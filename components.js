@@ -48,6 +48,19 @@ function injectBrandIcons() {
   });
 }
 
+function injectIconLibrary() {
+  if (!document.head) return;
+  if (document.querySelector('link[data-fa-icons="true"]')) return;
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css';
+  link.crossOrigin = 'anonymous';
+  link.referrerPolicy = 'no-referrer';
+  link.setAttribute('data-fa-icons', 'true');
+  document.head.appendChild(link);
+}
+
 function getCurrentPage() {
   const path = window.location.pathname.split('/').pop() || 'index.html';
   const base = (path.replace('.html', '') || 'home').toLowerCase();
@@ -64,61 +77,63 @@ function setupHeaderInteractions(host) {
   const header = host?.querySelector('.site-header');
   const toggleButton = host?.querySelector('[data-nav-toggle]');
   const navPanel = host?.querySelector('[data-nav-panel]');
-  const panelLinks = navPanel ? Array.from(navPanel.querySelectorAll('a, button')) : [];
-
-  if (!header || !toggleButton || !navPanel) return;
-
-  const mobileQuery = window.matchMedia('(max-width: 720px)');
-
-  const isMobileViewport = () => mobileQuery.matches;
-
-  const syncPanelInteractivity = (isOpen) => {
-    const shouldDisable = isMobileViewport() && !isOpen;
-    panelLinks.forEach((node) => {
-      if (shouldDisable) {
-        node.setAttribute('tabindex', '-1');
-      } else {
-        node.removeAttribute('tabindex');
-      }
-    });
-  };
+  if (!header) return;
 
   const updateScrolledState = () => {
     header.classList.toggle('scrolled', window.scrollY > 12);
   };
 
   const setOpen = (isOpen) => {
+    if (!toggleButton || !navPanel) return;
     header.classList.toggle('nav-open', isOpen);
-    document.body.classList.toggle('nav-open', isOpen && isMobileViewport());
     toggleButton.setAttribute('aria-expanded', String(isOpen));
     navPanel.setAttribute('aria-hidden', String(!isOpen));
-    syncPanelInteractivity(isOpen);
-
-    if (isOpen && isMobileViewport()) {
-      const firstFocusable = panelLinks.find((node) => !node.hasAttribute('disabled'));
-      if (firstFocusable) {
-        requestAnimationFrame(() => firstFocusable.focus());
-      }
-    }
   };
 
-  toggleButton.addEventListener('click', () => {
-    setOpen(!header.classList.contains('nav-open'));
-  });
+  if (toggleButton && navPanel) {
+    toggleButton.addEventListener('click', () => {
+      setOpen(!header.classList.contains('nav-open'));
+    });
 
-  navPanel.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', () => setOpen(false));
-  });
+    navPanel.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => setOpen(false));
+    });
+
+    if (window.__cosmoHeaderKeyHandler) {
+      document.removeEventListener('keydown', window.__cosmoHeaderKeyHandler);
+    }
+
+    window.__cosmoHeaderKeyHandler = (event) => {
+      if (event.key === 'Escape' && header.classList.contains('nav-open')) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', window.__cosmoHeaderKeyHandler);
+
+    if (window.__cosmoHeaderClickHandler) {
+      document.removeEventListener('click', window.__cosmoHeaderClickHandler);
+    }
+
+    window.__cosmoHeaderClickHandler = (event) => {
+      if (!header.classList.contains('nav-open')) return;
+      if (window.innerWidth > 980) return;
+      if (header.contains(event.target)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener('click', window.__cosmoHeaderClickHandler);
+  }
 
   if (window.__cosmoHeaderResizeHandler) {
     window.removeEventListener('resize', window.__cosmoHeaderResizeHandler);
   }
 
   window.__cosmoHeaderResizeHandler = () => {
-    if (window.innerWidth > 720) {
+    if (window.innerWidth > 980) {
       setOpen(false);
     }
-    syncPanelInteractivity(header.classList.contains('nav-open'));
+    updateScrolledState();
   };
 
   window.addEventListener('resize', window.__cosmoHeaderResizeHandler, { passive: true });
@@ -133,34 +148,7 @@ function setupHeaderInteractions(host) {
 
   window.addEventListener('scroll', window.__cosmoHeaderScrollHandler, { passive: true });
 
-  if (window.__cosmoHeaderKeyHandler) {
-    document.removeEventListener('keydown', window.__cosmoHeaderKeyHandler);
-  }
-
-  window.__cosmoHeaderKeyHandler = (event) => {
-    if (event.key === 'Escape' && header.classList.contains('nav-open')) {
-      setOpen(false);
-      toggleButton.focus();
-    }
-  };
-
-  document.addEventListener('keydown', window.__cosmoHeaderKeyHandler);
-
-  if (window.__cosmoHeaderClickHandler) {
-    document.removeEventListener('click', window.__cosmoHeaderClickHandler);
-  }
-
-  window.__cosmoHeaderClickHandler = (event) => {
-    if (!header.classList.contains('nav-open')) return;
-    if (!isMobileViewport()) return;
-    if (header.contains(event.target)) return;
-    setOpen(false);
-  };
-
-  document.addEventListener('click', window.__cosmoHeaderClickHandler);
-
   updateScrolledState();
-  syncPanelInteractivity(false);
 }
 
 function renderHeader() {
@@ -174,6 +162,8 @@ function renderHeader() {
     ? window.getCurrentUser() 
     : null;
   const isLoggedIn = Boolean(user);
+  const mobileAccountHref = isLoggedIn ? 'profile.html' : 'login.html';
+  const mobileAccountLabel = isLoggedIn ? 'Account' : 'Login';
   
   const authActions = isLoggedIn
     ? `<a class="btn btn-ghost" href="profile.html" style="display: flex; align-items: center; gap: 0.5rem;">
@@ -195,14 +185,16 @@ function renderHeader() {
           </span>
           <span>Cosmo3D</span>
         </a>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-nav-toggle>
-          <span class="nav-toggle-icon" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-          <span class="nav-toggle-label">Menu</span>
-        </button>
+        <div class="mobile-controls" aria-label="Mobile navigation controls">
+          <a class="mobile-icon-btn" href="${mobileAccountHref}" aria-label="${mobileAccountLabel}">
+            <i class="fa-regular fa-user" aria-hidden="true"></i>
+          </a>
+          <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-nav-toggle>
+            <i class="fa-solid fa-bars nav-i-bars" aria-hidden="true"></i>
+            <i class="fa-solid fa-xmark nav-i-close" aria-hidden="true"></i>
+            <span class="sr-only">Toggle menu</span>
+          </button>
+        </div>
         <div class="nav-panel" id="primary-navigation" data-nav-panel aria-hidden="true">
           <nav class="nav-links" aria-label="Primary navigation">
             ${Object.entries(siteRoutes).map(([key, item]) => {
@@ -287,6 +279,7 @@ function renderFooter() {
 if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     injectBrandIcons();
+    injectIconLibrary();
     renderHeader();
     renderFooter();
     setupAuthListener();
