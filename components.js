@@ -37,14 +37,14 @@ function renderHeader() {
   host.innerHTML = `
     <header class="site-header">
       <div class="container navbar">
-        <a class="brand" href="index.html" aria-label="Lumen AI home">
+        <a class="brand" href="index.html" aria-label="Cosmo3D home">
           <span class="brand-mark">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 2L4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
               <path d="M9 12.8 11.3 15l4-4.2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span>Lumen AI</span>
+          <span>Cosmo3D</span>
         </a>
         <nav class="nav-links" aria-label="Primary navigation">
           ${Object.entries(siteRoutes).map(([key, item]) => {
@@ -79,14 +79,14 @@ function renderFooter() {
       <div class="container">
         <div class="footer-grid">
           <div>
-            <a class="brand" href="index.html" aria-label="Lumen AI home">
+            <a class="brand" href="index.html" aria-label="Cosmo3D home">
               <span class="brand-mark">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M12 2L4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
                   <path d="M9 12.8 11.3 15l4-4.2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>
-              <span>Lumen AI</span>
+              <span>Cosmo3D</span>
             </a>
             <p style="margin-top: 0.85rem; max-width: 340px;">Turn every product video into an immersive 3D story that sells faster and feels more real.</p>
             <div class="socials" aria-label="Social links">
@@ -120,7 +120,7 @@ function renderFooter() {
             </div>
           </div>
         </div>
-        <p style="margin-top: 1.2rem; color: var(--muted);">© <span id="year"></span> Lumen AI. All rights reserved.</p>
+        <p style="margin-top: 1.2rem; color: var(--muted);">© <span id="year"></span> Cosmo3D. All rights reserved.</p>
       </div>
     </footer>
   `;

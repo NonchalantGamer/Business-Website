@@ -156,14 +156,30 @@ function validateLoginData({ email, password }) {
  * Log in or Sign up with Google OAuth
  */
 async function loginWithGoogle() {
-  const supabase = await initSupabase();
-  if (!supabase) return { success: false, error: 'Auth not initialized' };
+  let supabase;
+  try {
+    supabase = await initSupabase();
+  } catch (err) {
+    console.error('Failed to initialize Supabase:', err);
+  }
+
+  if (!supabase) {
+    return { success: false, error: 'Authentication service not initialized. Check your Supabase configuration.' };
+  }
+
+  if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
+    const errorMsg = 'Google Sign-In requires hosting on an HTTP/HTTPS web server (not file://).';
+    console.warn(errorMsg);
+    return { success: false, error: errorMsg };
+  }
 
   try {
+    const redirectUrl = new URL('index.html', window.location.href).href;
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/index.html`
+        redirectTo: redirectUrl
       }
     });
 
@@ -171,7 +187,7 @@ async function loginWithGoogle() {
     return { success: true, data };
   } catch (error) {
     console.error('Google Auth Error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'An error occurred connecting to Google.' };
   }
 }
 async function signupUser({ name, email, password, passwordConfirm }) {
