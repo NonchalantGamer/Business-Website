@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Manage your Cosmo3D account profile and sign out securely." />
+    <meta name="description" content="Manage your Cosmo3D account profile and update your personal information." />
     <title>Profile | Cosmo3D</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,64 +13,285 @@
   <body data-page="profile">
     <div data-site-header></div>
 
-    <main class="page-shell">
-      <section class="section">
-        <div class="container reveal">
-          <div class="section-header">
-            <span class="eyebrow">Your account</span>
-            <h1>Welcome to your personalized workspace.</h1>
-            <p class="lead">Review your details, manage your experience, and sign out whenever you're done.</p>
-          </div>
+    <main class="page-shell profile-page">
+      <section class="section profile-hero-section">
+        <div class="container">
+          <div class="card profile-hero">
+            <div class="profile-hero-main">
+              <div class="profile-avatar" id="profile-avatar-preview" aria-label="Profile picture">U</div>
+              <div class="profile-hero-copy">
+                <span class="eyebrow">Your account</span>
+                <h1 id="profile-name-heading">Loading…</h1>
+                <p id="profile-summary">Loading your profile details…</p>
+                <div class="profile-hero-actions">
+                  <input id="profile-avatar-input" type="file" accept="image/*" hidden />
+                  <button class="btn btn-secondary" type="button" id="change-photo-button">Choose photo</button>
+                  <button class="btn btn-ghost" type="button" id="remove-photo-button">Remove photo</button>
+                </div>
+              </div>
+            </div>
 
-          <div class="card-grid">
-            <article class="card">
-              <div class="card-icon">◎</div>
-              <h3 id="profile-name">Loading…</h3>
-              <p id="profile-email">Loading…</p>
-              <p style="margin-top: 0.8rem;">Your account is active and ready for premium product experiences.</p>
-            </article>
-            <article class="card">
-              <div class="card-icon">⚙</div>
-              <h3>Account controls</h3>
-              <p>Update your workspace preferences, manage billing, and keep your activity synced across devices.</p>
-              <button class="btn btn-primary" id="logout-button" style="margin-top: 1rem;">Log out</button>
-            </article>
+            <div class="profile-hero-stats">
+              <div class="profile-stat">
+                <span>Member since</span>
+                <strong id="profile-created-at">—</strong>
+              </div>
+              <div class="profile-stat">
+                <span>Account email</span>
+                <strong id="profile-email-summary">—</strong>
+              </div>
+              <div class="profile-stat">
+                <span>Session</span>
+                <strong>Active</strong>
+              </div>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section class="section profile-details-section">
+        <div class="container profile-grid">
+          <article class="card profile-panel">
+            <div class="section-header">
+              <span class="eyebrow">Profile details</span>
+              <h2>Edit your information</h2>
+            </div>
+
+            <form id="profile-form" class="profile-form" novalidate>
+              <label>
+                Full name
+                <input id="profile-name-input" type="text" placeholder="Your name" required />
+              </label>
+
+              <label>
+                Email address
+                <input id="profile-email-input" type="email" placeholder="you@company.com" required />
+              </label>
+
+              <label>
+                Bio
+                <textarea id="profile-bio-input" rows="5" placeholder="Tell people a little about yourself."></textarea>
+              </label>
+
+              <p id="profile-message" role="status" aria-live="polite" class="profile-message"></p>
+
+              <div class="profile-form-actions">
+                <button class="btn btn-primary" id="save-profile-button" type="submit">Save changes</button>
+                <button class="btn btn-ghost" id="reset-profile-button" type="button">Reset</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="card profile-panel">
+            <div class="section-header">
+              <span class="eyebrow">Account snapshot</span>
+              <h2>Signed in as</h2>
+            </div>
+
+            <div class="profile-snapshot">
+              <div class="profile-snapshot-row">
+                <span>Account ID</span>
+                <strong id="profile-id">—</strong>
+              </div>
+              <div class="profile-snapshot-row">
+                <span>Name</span>
+                <strong id="profile-name-readonly">—</strong>
+              </div>
+              <div class="profile-snapshot-row">
+                <span>Email</span>
+                <strong id="profile-email-readonly">—</strong>
+              </div>
+              <div class="profile-snapshot-row">
+                <span>Photo</span>
+                <strong>Gallery upload enabled</strong>
+              </div>
+            </div>
+
+            <p class="profile-note">Changing your email may require confirmation from Supabase before the new address becomes active.</p>
+
+            <button class="btn btn-secondary" id="logout-button" type="button">Log out</button>
+          </article>
         </div>
       </section>
     </main>
 
     <div data-site-footer></div>
-    
-    <!-- Supabase Client -->
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="config.js"></script>
     <script src="components.js"></script>
     <script src="auth.js"></script>
     <script src="route-protection.js"></script>
     <script src="script.js"></script>
-    
+
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
-        const nameNode = document.getElementById('profile-name');
-        const emailNode = document.getElementById('profile-email');
+        const avatarPreview = document.getElementById('profile-avatar-preview');
+        const avatarInput = document.getElementById('profile-avatar-input');
+        const changePhotoButton = document.getElementById('change-photo-button');
+        const removePhotoButton = document.getElementById('remove-photo-button');
+        const form = document.getElementById('profile-form');
+        const nameInput = document.getElementById('profile-name-input');
+        const emailInput = document.getElementById('profile-email-input');
+        const bioInput = document.getElementById('profile-bio-input');
+        const messageEl = document.getElementById('profile-message');
+        const saveButton = document.getElementById('save-profile-button');
+        const resetButton = document.getElementById('reset-profile-button');
         const logoutButton = document.getElementById('logout-button');
+        const nameHeading = document.getElementById('profile-name-heading');
+        const summaryEl = document.getElementById('profile-summary');
+        const createdAtEl = document.getElementById('profile-created-at');
+        const emailSummaryEl = document.getElementById('profile-email-summary');
+        const profileIdEl = document.getElementById('profile-id');
+        const nameReadonlyEl = document.getElementById('profile-name-readonly');
+        const emailReadonlyEl = document.getElementById('profile-email-readonly');
 
-        // Wait for auth initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        let currentProfile = null;
+        let selectedAvatarUrl = '';
+
+        const setMessage = (text, color = 'var(--muted)') => {
+          messageEl.textContent = text;
+          messageEl.style.color = color;
+        };
+
+        const getInitials = (name) => {
+          const parts = String(name || 'User').trim().split(/\s+/).filter(Boolean);
+          if (!parts.length) return 'U';
+          return parts.slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+        };
+
+        const renderAvatar = (avatarUrl, name) => {
+          const initials = getInitials(name);
+          avatarPreview.textContent = initials;
+          avatarPreview.style.backgroundImage = 'none';
+          avatarPreview.classList.remove('has-image');
+
+          if (avatarUrl) {
+            avatarPreview.style.backgroundImage = `url("${avatarUrl}")`;
+            avatarPreview.textContent = '';
+            avatarPreview.classList.add('has-image');
+          }
+        };
+
+        const fillForm = (user) => {
+          currentProfile = {
+            name: user.name || '',
+            email: user.email || '',
+            bio: user.bio || '',
+            avatarUrl: user.avatarUrl || '',
+          };
+
+          selectedAvatarUrl = currentProfile.avatarUrl;
+          nameInput.value = currentProfile.name;
+          emailInput.value = currentProfile.email;
+          bioInput.value = currentProfile.bio;
+          nameHeading.textContent = currentProfile.name || 'Your profile';
+          summaryEl.textContent = currentProfile.bio || 'Manage your profile details and picture from one place.';
+          createdAtEl.textContent = user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '—';
+          emailSummaryEl.textContent = currentProfile.email || '—';
+          profileIdEl.textContent = user.id || '—';
+          nameReadonlyEl.textContent = currentProfile.name || '—';
+          emailReadonlyEl.textContent = currentProfile.email || '—';
+          renderAvatar(currentProfile.avatarUrl, currentProfile.name);
+        };
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         const user = window.getCurrentUser();
-
         if (!user) {
-          console.warn('User not authenticated, redirecting to login');
           window.location.href = 'login.html';
           return;
         }
 
-        // Display user info
-        nameNode.textContent = user.name || 'User';
-        emailNode.textContent = user.email || 'No email';
+        fillForm(user);
+
+        changePhotoButton?.addEventListener('click', () => avatarInput?.click());
+
+        avatarInput?.addEventListener('change', () => {
+          const file = avatarInput.files && avatarInput.files[0];
+          if (!file) return;
+
+          if (!file.type.startsWith('image/')) {
+            setMessage('Please choose an image file.', '#ff9c9c');
+            avatarInput.value = '';
+            return;
+          }
+
+          if (file.size > 4 * 1024 * 1024) {
+            setMessage('Please choose an image smaller than 4 MB.', '#ff9c9c');
+            avatarInput.value = '';
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = () => {
+            selectedAvatarUrl = String(reader.result || '');
+            renderAvatar(selectedAvatarUrl, nameInput.value || currentProfile.name);
+            setMessage('Avatar selected. Save changes to keep it.', 'var(--accent)');
+          };
+          reader.readAsDataURL(file);
+        });
+
+        removePhotoButton?.addEventListener('click', () => {
+          selectedAvatarUrl = '';
+          if (avatarInput) avatarInput.value = '';
+          renderAvatar('', nameInput.value || currentProfile.name);
+          setMessage('Avatar removed. Save changes to apply.', 'var(--accent)');
+        });
+
+        resetButton?.addEventListener('click', () => {
+          fillForm(window.getCurrentUser());
+          setMessage('Form reset.');
+        });
+
+        form?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          setMessage('');
+          if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+          }
+
+          try {
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const bio = bioInput.value.trim();
+
+            if (!name) {
+              setMessage('Please enter your name.', '#ff9c9c');
+              return;
+            }
+
+            if (!email) {
+              setMessage('Please enter your email address.', '#ff9c9c');
+              return;
+            }
+
+            const result = await window.updateProfile({
+              name,
+              email,
+              bio,
+              avatarUrl: selectedAvatarUrl,
+            });
+
+            if (result.success) {
+              currentProfile = result.user || window.getCurrentUser();
+              fillForm(currentProfile);
+              setMessage(result.message || 'Profile saved successfully.', '#8cf7c2');
+            } else {
+              setMessage(result.error || 'Unable to save profile.', '#ff9c9c');
+            }
+          } catch (error) {
+            console.error('Profile save error:', error);
+            setMessage('An unexpected error occurred while saving.', '#ff9c9c');
+          } finally {
+            if (saveButton) {
+              saveButton.disabled = false;
+              saveButton.textContent = 'Save changes';
+            }
+          }
+        });
 
         logoutButton?.addEventListener('click', async () => {
           logoutButton.disabled = true;
@@ -93,11 +314,15 @@
           }
         });
 
-        // Listen for auth changes
         if (window.onAuthChange) {
           window.onAuthChange((event) => {
             if (event.type === 'LOGOUT') {
               window.location.href = 'index.html';
+            }
+
+            if (event.type === 'PROFILE_UPDATED' && event.user) {
+              currentProfile = event.user;
+              fillForm(event.user);
             }
           });
         }

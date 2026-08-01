@@ -15,6 +15,21 @@ const AUTH_STORAGE_KEYS = {
 let currentUser = null;
 let authListeners = [];
 
+function buildCurrentUser(user, fallback = {}) {
+  if (!user) return null;
+
+  const metadata = user.user_metadata || {};
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: metadata.name || fallback.name || user.email,
+    bio: metadata.bio || fallback.bio || '',
+    avatarUrl: metadata.avatar_url || metadata.avatarUrl || fallback.avatarUrl || '',
+    createdAt: user.created_at,
+  };
+}
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -60,12 +75,17 @@ async function restoreSession() {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.user) {
-      currentUser = {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.user_metadata?.name || session.user.email,
-        createdAt: session.user.created_at,
-      };
+      let fallback = {};
+      const stored = localStorage.getItem(AUTH_STORAGE_KEYS.currentUser);
+      if (stored) {
+        try {
+          fallback = JSON.parse(stored) || {};
+        } catch {
+          fallback = {};
+        }
+      }
+
+      currentUser = buildCurrentUser(session.user, fallback);
       localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
       notifyListeners({ type: 'SESSION_RESTORED', user: currentUser });
     } else {
@@ -227,12 +247,7 @@ async function signupUser({ name, email, password, passwordConfirm }) {
     }
 
     if (data?.user) {
-      currentUser = {
-        id: data.user.id,
-        email: data.user.email,
-        name: name.trim(),
-        createdAt: data.user.created_at,
-      };
+      currentUser = buildCurrentUser(data.user, { name: name.trim() });
       localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
       notifyListeners({ type: 'SIGNUP', user: currentUser });
 
@@ -281,12 +296,7 @@ async function loginUser(email, password) {
     }
 
     if (data?.user) {
-      currentUser = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.user_metadata?.name || data.user.email,
-        createdAt: data.user.created_at,
-      };
+      currentUser = buildCurrentUser(data.user);
       localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
       notifyListeners({ type: 'LOGIN', user: currentUser });
 
@@ -323,6 +333,60 @@ async function logoutUser() {
   } catch (error) {
     console.error('Logout error:', error);
     return { success: false, error: error.message || 'An error occurred during logout.' };
+  }
+}
+
+/**
+ * Update the current user's profile information.
+ * @param {Object} data - { name, email, bio, avatarUrl }
+ * @returns {Object} - { success, user, error, message }
+ */
+async function updateProfile({ name, email, bio, avatarUrl }) {
+  const supabase = await initSupabase();
+  if (!supabase) return { success: false, error: 'Auth not initialized' };
+
+  try {
+    const payload = {
+      data: {
+        name: (name || '').trim(),
+        bio: (bio || '').trim(),
+        avatar_url: avatarUrl || '',
+      },
+    };
+
+    const nextEmail = (email || '').trim().toLowerCase();
+    if (nextEmail && nextEmail !== currentUser?.email) {
+      payload.email = nextEmail;
+    }
+
+    const { data, error } = await supabase.auth.updateUser(payload);
+
+    if (error) {
+      return { success: false, error: error.message || 'Unable to update profile.' };
+    }
+
+    if (data?.user) {
+      currentUser = buildCurrentUser(data.user, {
+        name: (name || '').trim(),
+        bio: (bio || '').trim(),
+        avatarUrl: avatarUrl || '',
+      });
+      localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
+      notifyListeners({ type: 'PROFILE_UPDATED', user: currentUser });
+
+      return {
+        success: true,
+        user: currentUser,
+        message: payload.email
+          ? 'Profile saved. Check your inbox to confirm the new email address.'
+          : 'Profile saved successfully.',
+      };
+    }
+
+    return { success: false, error: 'Profile update failed. Please try again.' };
+  } catch (error) {
+    console.error('Profile update error:', error);
+    return { success: false, error: error.message || 'An error occurred while saving your profile.' };
   }
 }
 
@@ -387,6 +451,7 @@ if (typeof window !== 'undefined') {
   window.onAuthChange = onAuthChange;
   window.initAuth = initAuth;
   window.loginWithGoogle = loginWithGoogle;
+  window.updateProfile = updateProfile;
 
   document.addEventListener('DOMContentLoaded', () => {
     initAuth().catch(error => console.error('Auth init error:', error));
@@ -406,5 +471,6 @@ if (typeof module !== 'undefined') {
     getAuthState,
     onAuthChange,
     initAuth,
+    updateProfile,
   };
 }

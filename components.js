@@ -8,6 +8,46 @@ const siteRoutes = {
   contact: { label: 'Contact', href: 'contact.html' },
 };
 
+function getBrandMarkSvg() {
+  return `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2L4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M9 12.8 11.3 15l4-4.2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+}
+
+function injectBrandIcons() {
+  if (!document.head) return;
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="cosmo-gradient" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#7c4dff"/>
+          <stop offset="1" stop-color="#53d7ff"/>
+        </linearGradient>
+      </defs>
+      <path d="M12 2L4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4Z" fill="url(#cosmo-gradient)"/>
+      <path d="M9 12.8 11.3 15l4-4.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+  const href = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+  ['icon', 'shortcut icon', 'apple-touch-icon'].forEach((rel) => {
+    let link = document.querySelector(`link[rel="${rel}"]`);
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = rel;
+      document.head.appendChild(link);
+    }
+    if (rel === 'icon') {
+      link.type = 'image/svg+xml';
+    }
+    link.href = href;
+  });
+}
+
 function getCurrentPage() {
   const path = window.location.pathname.split('/').pop() || 'index.html';
   return path.replace('.html', '') || 'home';
@@ -27,9 +67,11 @@ function renderHeader() {
   
   const authActions = isLoggedIn
     ? `<a class="btn btn-ghost" href="profile.html" style="display: flex; align-items: center; gap: 0.5rem;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.2 0-7 2.2-7 5v1h14v-1c0-2.8-2.8-5-7-5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <span class="user-avatar-chip" aria-hidden="true"${user.avatarUrl ? ` style="background-image: url('${user.avatarUrl}')"` : ''}>
+          ${user.avatarUrl ? '' : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.2 0-7 2.2-7 5v1h14v-1c0-2.8-2.8-5-7-5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>`}
+        </span>
         ${user.name || 'Account'}
       </a>`
     : `<a class="btn btn-ghost" href="login.html">Login</a><a class="btn btn-primary" href="signup.html">Sign Up</a>`;
@@ -39,10 +81,7 @@ function renderHeader() {
       <div class="container navbar">
         <a class="brand" href="index.html" aria-label="Cosmo3D home">
           <span class="brand-mark">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 2L4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
-              <path d="M9 12.8 11.3 15l4-4.2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            ${getBrandMarkSvg()}
           </span>
           <span>Cosmo3D</span>
         </a>
@@ -64,7 +103,7 @@ function renderHeader() {
 function setupAuthListener() {
   if (typeof window !== 'undefined' && window.onAuthChange) {
     window.onAuthChange((event) => {
-      if (event.type === 'LOGIN' || event.type === 'LOGOUT' || event.type === 'SIGNUP') {
+      if (event.type === 'LOGIN' || event.type === 'LOGOUT' || event.type === 'SIGNUP' || event.type === 'PROFILE_UPDATED') {
         renderHeader();
       }
     });
@@ -81,10 +120,7 @@ function renderFooter() {
           <div>
             <a class="brand" href="index.html" aria-label="Cosmo3D home">
               <span class="brand-mark">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 2L4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
-                  <path d="M9 12.8 11.3 15l4-4.2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                ${getBrandMarkSvg()}
               </span>
               <span>Cosmo3D</span>
             </a>
@@ -128,6 +164,7 @@ function renderFooter() {
 
 if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
+    injectBrandIcons();
     renderHeader();
     renderFooter();
     setupAuthListener();
