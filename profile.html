@@ -155,10 +155,20 @@
         const AVATAR_BUCKET = 'avatars';
 
         const getSupabaseClient = async () => {
-          const supabase = window.getSupabase && (await window.getSupabase());
+          let supabase = null;
+
+          if (window.initSupabase) {
+            supabase = await window.initSupabase();
+          }
+
+          if (!supabase && window.getSupabase) {
+            supabase = await window.getSupabase();
+          }
+
           if (!supabase) {
             throw new Error('Storage is not available right now. Please refresh and try again.');
           }
+
           return supabase;
         };
 
@@ -366,7 +376,7 @@
             }
           } catch (error) {
             console.error('Profile save error:', error);
-            setMessage('An unexpected error occurred while saving.', '#ff9c9c');
+            setMessage(error?.message || 'An unexpected error occurred while saving.', '#ff9c9c');
           } finally {
             if (saveButton) {
               saveButton.disabled = false;
