@@ -54,8 +54,11 @@ function isCurrentRoutePublic() {
  * Should be called on DOMContentLoaded
  */
 async function protectCurrentRoute() {
-  // Wait a bit for auth to initialize
-  await new Promise(resolve => setTimeout(resolve, 500));
+  if (window.getAuthReady) {
+    await window.getAuthReady();
+  } else {
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
 
   if (!isCurrentRouteProtected()) {
     return; // Not a protected route

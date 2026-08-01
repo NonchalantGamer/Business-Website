@@ -120,9 +120,11 @@ function renderHeader() {
           <span>Cosmo3D</span>
         </a>
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-nav-toggle>
-          <span></span>
-          <span></span>
-          <span></span>
+          <span class="nav-toggle-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
           <span class="nav-toggle-label">Menu</span>
         </button>
         <div class="nav-panel" id="primary-navigation" data-nav-panel aria-hidden="true">

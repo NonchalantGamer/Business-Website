@@ -14,6 +14,7 @@ const AUTH_STORAGE_KEYS = {
 
 let currentUser = null;
 let authListeners = [];
+let authReady = null;
 
 function buildCurrentUser(user, fallback = {}) {
   if (!user) return null;
@@ -48,15 +49,31 @@ async function initAuth() {
   // Listen for auth changes
   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
-      currentUser = {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.user_metadata?.name || session.user.email,
-        createdAt: session.user.created_at,
-      };
+      let fallback = {};
+      const stored = localStorage.getItem(AUTH_STORAGE_KEYS.currentUser);
+      if (stored) {
+        try {
+          fallback = JSON.parse(stored) || {};
+        } catch {
+          fallback = {};
+        }
+      }
+
+      currentUser = buildCurrentUser(session.user, fallback);
       localStorage.setItem(AUTH_STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
       notifyListeners({ type: 'LOGIN', user: currentUser });
     } else {
+      const stored = localStorage.getItem(AUTH_STORAGE_KEYS.currentUser);
+      if (stored && event !== 'SIGNED_OUT') {
+        try {
+          currentUser = JSON.parse(stored);
+          notifyListeners({ type: 'SESSION_RESTORED', user: currentUser });
+          return;
+        } catch {
+          // Fall through and clear invalid stored data.
+        }
+      }
+
       currentUser = null;
       localStorage.removeItem(AUTH_STORAGE_KEYS.currentUser);
       notifyListeners({ type: 'LOGOUT' });
@@ -452,9 +469,10 @@ if (typeof window !== 'undefined') {
   window.initAuth = initAuth;
   window.loginWithGoogle = loginWithGoogle;
   window.updateProfile = updateProfile;
+  window.getAuthReady = () => authReady;
 
   document.addEventListener('DOMContentLoaded', () => {
-    initAuth().catch(error => console.error('Auth init error:', error));
+    authReady = initAuth().catch(error => console.error('Auth init error:', error));
   });
 }
 

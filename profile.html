@@ -120,7 +120,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="components.js?v=3"></script>
-    <script src="auth.js"></script>
+    <script src="auth.js?v=4"></script>
     <script src="route-protection.js"></script>
     <script src="script.js"></script>
 
@@ -195,7 +195,11 @@
           renderAvatar(currentProfile.avatarUrl, currentProfile.name);
         };
 
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        if (window.getAuthReady) {
+          await window.getAuthReady();
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
 
         const user = window.getCurrentUser();
         if (!user) {
