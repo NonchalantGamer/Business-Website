@@ -180,7 +180,10 @@ async function loginWithGoogle(options = {}) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl.href
+        redirectTo: redirectUrl.href,
+        queryParams: {
+          prompt: 'select_account'
+        }
       }
     });
 
